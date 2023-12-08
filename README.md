@@ -15,7 +15,7 @@ Aparte dace un escaneo general y especifico de cada puerto abierto con nmap y mu
     
     chmod +x autoscan
     
-    mv autoscan /usr/bin/
+    sudo mv autoscan /usr/bin/
 
 # Uso
 
