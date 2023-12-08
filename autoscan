@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Colores
+verde="\e[32m"
+azul="\e[34m"
+cyan="\e[36m"
+reset="\e[0m"
+
+# Función para mostrar la ayuda
+mostrar_ayuda() {
+    echo -e "${azul}Uso:${reset} $0 {nombre de la maquina} {ip de la maquina}"
+    echo -e "${cyan}Opciones disponibles:${reset}"
+    echo -e "\t${cyan}-h, --help${reset}       Muestra este panel de ayuda"
+    exit 0
+}
+
+# Verificar opciones de ayuda
+case "$1" in
+    -h|--help)
+        mostrar_ayuda
+        ;;
+esac
+
+if [ "$EUID" -ne 0 ]; then
+    echo "Este script requiere privilegios de superusuario. Por favor, ingresa la contraseña de sudo."
+    exec sudo "$0" "$@"
+fi
+
+if [ "$#" -ne 2 ]; then
+    echo -e "${azul}Uso:${reset} $0 {nombre de la maquina} {ip de la maquina}"
+    exit 1
+fi
+
+nombre_maquina="$1"
+ip_maquina="$2"
+directorio="./$nombre_maquina"
+
+# Crear directorio y entrar en él
+mkdir -p "$directorio"
+cd "$directorio" || exit 1
+
+# Crear subdirectorios
+mkdir -p nmap content exploits scripts
+
+# Ejecutar comando nmap sin mostrar output
+nmap -p- --open -sS -min-rate 5000 -vvv -n -Pn -oG nmap/allPorts "$ip_maquina" > /dev/null 2>&1
+
+# Extraer información y copiar puertos al portapapeles
+ports="$(cat nmap/allPorts | grep -oP '\d{1,5}/open' | awk '{print $1}' FS='/' | xargs | tr ' ' ',')"
+ip_address="$(cat nmap/allPorts | grep -oP '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}' | sort -u | head -n 1)"
+echo -e "\n${cyan}+++ Extrayendo información +++${reset}\n"
+echo -e "- Dirección IP: $ip_address"
+echo -e "- Puertos abiertos: $ports\n"
+echo $ports | tr -d '\n' | xclip -sel clip
+
+# Ejecutar nmap con los puertos extraídos
+nmap -sCV -p"$ports" "$ip_maquina" -oN nmap/targeted >/dev/null 2>&1
+
+# Mostrar el contenido del archivo excluyendo las primeras y últimas 4 líneas
+echo -e "${azul}+++ Escaneo de cada puerto con nmap +++${reset}\n"
+tail -n +5 nmap/targeted | head -n -4
+
+# Mensaje final
+echo -e "\n${verde}+++ Todas las operaciones completadas +++${reset}"
