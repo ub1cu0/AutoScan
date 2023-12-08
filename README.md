@@ -1,5 +1,5 @@
 # AutoScan
-Automatized pentesting scanner and automatic enviroment creator
+Escaner de puertos y montaje de entorno de trabajo automatizado
 
 # Descripción
 
